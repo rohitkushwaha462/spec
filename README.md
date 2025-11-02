@@ -5,6 +5,16 @@
 
 This repository contains the official specification for **Token-Oriented Object Notation (TOON)**, a compact, human-readable serialization format designed for passing structured data to Large Language Models with significantly reduced token usage.
 
+## 📋 Specification
+
+[→ Read the full specification (SPEC.md)](./SPEC.md)
+
+- **Version:** 1.3 (2025-10-31)
+- **Status:** Working Draft
+- **License:** MIT
+
+The specification includes complete grammar (ABNF), encoding rules, validation requirements, and conformance criteria.
+
 ## What is TOON?
 
 **Token-Oriented Object Notation** is a compact, human-readable serialization format designed for passing structured data to Large Language Models with significantly reduced token usage. It's intended for LLM input, not output.
@@ -40,45 +50,19 @@ users[2]{id,name,role}:
   2,Bob,user
 ```
 
-## Specification
-
-📋 [Read the full specification →](./SPEC.md)
-
-**Version:** 1.3 (2025-10-31)
-
-**Status:** Working Draft
-
-**License:** MIT
-
 ## Reference Implementation
 
 The reference implementation in TypeScript/JavaScript is maintained at: [github.com/johannschopplich/toon](https://github.com/johannschopplich/toon)
 
 The reference implementation includes:
+
 - Complete encoder and decoder
-- Comprehensive test suite
 - CLI tools for JSON ↔ TOON conversion
 - Performance benchmarks
 
 ## Community Implementations
 
-The following implementations follow the TOON specification:
-
-- **.NET:** [ToonSharp](https://github.com/0xZunia/ToonSharp)
-- **Crystal:** [toon-crystal](https://github.com/mamantoha/toon-crystal)
-- **Dart:** [toon](https://github.com/wisamidris77/toon)
-- **Elixir:** [toon_ex](https://github.com/kentaro/toon_ex)
-- **Gleam:** [toon_codec](https://github.com/axelbellec/toon_codec)
-- **Go:** [gotoon](https://github.com/alpkeskin/gotoon)
-- **Java:** [JToon](https://github.com/felipestanzani/JToon)
-- **OCaml:** [ocaml-toon](https://github.com/davesnx/ocaml-toon)
-- **PHP:** [toon-php](https://github.com/HelgeSverre/toon-php)
-- **Python:** [python-toon](https://github.com/xaviviro/python-toon), [pytoon](https://github.com/bpradana/pytoon)
-- **Ruby:** [toon-ruby](https://github.com/andrepcg/toon-ruby)
-- **Rust:** [rtoon](https://github.com/shreyasbhat0/rtoon)
-- **Swift:** [TOONEncoder](https://github.com/mattt/TOONEncoder)
-
-Want to add your implementation? [Open an issue](https://github.com/toon-format/spec/issues) or submit a pull request.
+Official community-driven implementations are currently being developed at the [github.com/toon-format](https://github.com/toon-format) organization.
 
 ## Test Fixtures & Conformance
 
@@ -86,8 +70,8 @@ The [tests/fixtures/](./tests/fixtures/) directory contains **language-agnostic 
 
 **What's included:**
 
-- **Encoding tests:** JSON → TOON conversion (~150 tests)
-- **Decoding tests:** TOON → JSON parsing (~120 tests)
+- **Encoding tests:** JSON → TOON conversion
+- **Decoding tests:** TOON → JSON parsing
 - **Error cases:** Validation and strict mode checks
 - **Edge cases:** All corner cases from the specification
 
