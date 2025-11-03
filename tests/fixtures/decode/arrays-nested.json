@@ -23,7 +23,26 @@
       "specSection": "7.3"
     },
     {
-      "name": "parses objects with nested values inside list items",
+      "name": "parses list arrays with deeply nested objects",
+      "input": "items[2]:\n  - properties:\n      state:\n        type: string\n  - id: 2",
+      "expected": {
+        "items": [
+          {
+            "properties": {
+              "state": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "id": 2
+          }
+        ]
+      },
+      "specSection": "10"
+    },
+    {
+      "name": "parses list arrays containing objects with nested properties",
       "input": "items[1]:\n  - id: 1\n    nested:\n      x: 1",
       "expected": {
         "items": [
