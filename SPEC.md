@@ -91,35 +91,52 @@ https://www.iso.org/standard/70907.html
 
 ## Introduction (Informative)
 
-TOON (Token-Oriented Object Notation) is a line-oriented, indentation-based format designed to carry structured JSON-compatible data into LLM prompts with fewer tokens and clearer structure than JSON. TOON's sweet spot is arrays of uniform objects (multiple fields per row, same structure across items) where it removes repeated keys and punctuation while preserving enough structure for robust parsing and validation.
+### Purpose and scope
 
-### Motivation and Typical Use
+TOON (Token-Oriented Object Notation) is a line-oriented, indentation-based text format that encodes the JSON data model with explicit structure and minimal quoting. It is designed as a compact, deterministic representation of structured data, particularly well-suited to arrays of uniform objects. TOON is often used as a translation layer: produce data as JSON in code, encode to TOON for downstream consumption (e.g., LLM prompts), and decode back to JSON if needed.
 
-LLM tokens are costly and context-limited. Repeating JSON keys in large arrays wastes tokens and can obscure structure. TOON declares array length and fields once, then streams rows using a single active delimiter (comma, tab, or pipe), minimizing overhead and improving model reliability. Typical workflow: produce data as JSON in your codebase, encode to TOON for LLM input, and (optionally) decode back to JSON after inference.
+### Applicability and non‑goals
 
-### Relationship to JSON, CSV, and YAML
+Use TOON when:
+- arrays of objects share the same fields (uniform tabular data),
+- deterministic, minimally quoted text is desirable,
+- explicit lengths and fixed row widths help detect truncation or malformed data,
+- you want unambiguous, human-readable structure without repeating keys.
 
-- JSON: Ubiquitous and general-purpose. TOON preserves the JSON data model but removes redundant syntax for tabular structures. For deeply nested, non-uniform data, JSON may be more efficient.
-- CSV/TSV: Most compact for flat tables, but lacks nesting, type awareness, row counts, and field disambiguation. TOON adds minimal overhead to gain explicit structure (length markers [N], in-scope delimiter, field names, deterministic quoting) that improves LLM reliability.
-- YAML: Similar indentation style; TOON is more constrained and deterministic, with explicit array headers, fixed quoting rules, and no comments.
+TOON is not intended to replace:
+- JSON for non-uniform or deeply nested structures where repeated keys are not dominant,
+- CSV for flat, strictly tabular data where maximum compactness is required and nesting is not needed,
+- general-purpose storage or public APIs. TOON carries the JSON data model; it is a transport/authoring format with explicit structure, not an extended type system or schema language.
 
-### Design Principles
+Out of scope:
+- comments and annotations,
+- alternative number systems or locale-specific formatting,
+- user-defined escape sequences or control directives.
 
-- Token efficiency where it matters: arrays of uniform objects.
-- Determinism: canonical number formatting, stable field order, fixed indentation, no comments.
-- LLM-friendly guardrails: explicit lengths and field lists, delimiter scoping per array header, minimal and deterministic quoting, strict-mode validation of counts, widths, indentation, and escapes.
-- Language-neutral: encoders/decoders operate over the JSON data model; canonical number form and decoding rules are host-agnostic (see Section 2 and Appendix G).
+### Relationship to JSON, CSV, and YAML (Informative)
 
-### Specification Scope
+- **JSON**: TOON preserves the JSON data model. It is more compact for uniform arrays of objects by declaring length and fields once. For non-uniform or deeply nested data, JSON may be more efficient.
+- **CSV/TSV**: CSV is typically more compact for flat tables but lacks nesting and type awareness. TOON adds explicit lengths, per-array delimiter scoping, field lists, and deterministic quoting, while remaining lightweight.
+- **YAML**: TOON uses indentation and hyphen markers but is more constrained and deterministic: no comments, explicit array headers with lengths, fixed quoting rules, and a narrow escape set.
 
-This specification defines:
+### Example (Informative)
 
-- The abstract data model (Section 2)
-- Type normalization rules for encoders (Section 3)
-- Concrete syntax and formatting rules (Sections 5-12)
-- Parsing and decoding semantics (Section 4)
-- Conformance requirements for encoders, decoders, and validators (Section 13)
-- Security and internationalization considerations (Sections 15-16)
+```
+users[2]{id,name,role}:
+  1,Alice,admin
+  2,Bob,user
+```
+
+### Document roadmap
+
+Normative rules are organized as follows:
+- Data model and canonical number form (§2); normalization on encode (§3); decoding interpretation (§4).
+- Concrete syntax, including root-form determination (§5) and header syntax (§6).
+- Strings and keys (§7); objects (§8); arrays and their sub-forms (§9); objects as list items (§10); delimiter rules (§11).
+- Indentation and whitespace (§12); conformance and options (§13).
+- Strict-mode errors (authoritative checklist) (§14).
+
+Appendices are informative unless stated otherwise and provide examples, parsing helpers, and implementation guidance.
 
 ## 1. Terminology and Conventions
 
