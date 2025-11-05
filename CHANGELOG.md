@@ -5,6 +5,20 @@ All notable changes to the TOON specification will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4] - 2025-11-05
+
+### Changed
+
+- Removed JavaScript-specific normalization details from specification; replaced with language-agnostic requirements (Section 3)
+- Defined canonical number format for encoders: no exponent notation, no trailing zeros, no leading zeros except "0" (Section 2)
+- Clarified decoder handling of exponent notation and out-of-range numbers (Section 2)
+- Expanded `\w` regex notation to explicit character class `[A-Za-z0-9_]` for cross-language clarity (Section 7.3)
+- Clarified non-strict mode tab handling as implementation-defined (Section 12)
+
+### Added
+
+- Appendix G: Host Type Normalization Examples with guidance for Go, JavaScript, Python, and Rust implementations
+
 ## [1.3] - 2025-10-31
 
 ### Added

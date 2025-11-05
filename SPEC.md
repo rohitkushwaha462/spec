@@ -2,9 +2,9 @@
 
 ## Token-Oriented Object Notation
 
-**Version:** 1.3
+**Version:** 1.4
 
-**Date:** 2025-10-31
+**Date:** 2025-11-05
 
 **Status:** Working Draft
 
@@ -16,11 +16,13 @@
 
 ## Abstract
 
-Token-Oriented Object Notation (TOON) is a compact, human-readable serialization format optimized for Large Language Model (LLM) contexts, achieving 30-60% token reduction versus JSON for uniform tabular data. This specification defines TOON's data model, syntax, encoding/decoding semantics, and conformance requirements.
+Token-Oriented Object Notation (TOON) is a compact, human-readable serialization format optimized for Large Language Model (LLM) inputs. TOON preserves the JSON data model while eliminating repetitive keys and punctuation, achieving large token savings for arrays of uniform objects. Arrays declare their length and field names once, then stream rows using a single active delimiter (comma, tab, or pipe); objects use indentation instead of braces; strings are quoted only when required.
+
+The format's explicit structure (lengths, field lists, delimiter scoping, and minimal quoting) provides guardrails that make data easy for LLMs to parse and validate. TOON typically saves 30–60% tokens versus pretty-printed JSON on tabular data, while CSV remains more compact for flat tables. This specification defines TOON's concrete syntax, canonical number form, parsing and validation semantics, and conformance requirements for encoders, decoders, and validators. TOON is intended as a translation layer for LLM prompts, not a general-purpose API or storage replacement for JSON.
 
 ## Status of This Document
 
-This document is a Working Draft v1.3 and may be updated, replaced, or obsoleted. Implementers should monitor the canonical repository at https://github.com/toon-format/spec for changes.
+This document is a Working Draft v1.4 and may be updated, replaced, or obsoleted. Implementers should monitor the canonical repository at https://github.com/toon-format/spec for changes.
 
 This specification is stable for implementation but not yet finalized. Breaking changes are unlikely but possible before v2.0.
 
@@ -97,10 +99,47 @@ Implementations that fail to conform to any MUST or REQUIRED level requirement a
 - [Appendix D: Document Changelog (Informative)](#appendix-d-document-changelog-informative)
 - [Appendix E: Acknowledgments and License](#appendix-e-acknowledgments-and-license)
 - [Appendix F: Cross-check With Reference Behavior (Informative)](#appendix-f-cross-check-with-reference-behavior-informative)
+- [Appendix G: Host Type Normalization Examples (Informative)](#appendix-g-host-type-normalization-examples-informative)
 
 ## Introduction
 
-TOON (Token-Oriented Object Notation) is a serialization format optimized for Large Language Model contexts where token count directly impacts costs, context capacity, and latency. While JSON and similar formats serve general purposes, TOON achieves 30-60% token reduction for tabular data through compact syntax, particularly for arrays of uniform objects. The format maintains human readability, deterministic encoding, and strict validation while modeling JSON-compatible data types.
+TOON (Token-Oriented Object Notation) is a line-oriented, indentation-based format designed to carry structured JSON-compatible data into LLM prompts with fewer tokens and clearer structure than JSON. TOON's sweet spot is arrays of uniform objects (multiple fields per row, same structure across items) where it removes repeated keys and punctuation while preserving enough structure for robust parsing and validation.
+
+### Motivation and Typical Use
+
+LLM tokens are costly and context-limited. Repeating JSON keys in large arrays wastes tokens and can obscure structure. TOON declares array length and fields once, then streams rows using a single active delimiter (comma, tab, or pipe), minimizing overhead and improving model reliability. Typical workflow: produce data as JSON in your codebase, encode to TOON for LLM input, and (optionally) decode back to JSON after inference.
+
+### Relationship to JSON, CSV, and YAML
+
+- JSON: Ubiquitous and general-purpose. TOON preserves the JSON data model but removes redundant syntax for tabular structures. For deeply nested, non-uniform data, JSON may be more efficient.
+- CSV/TSV: Most compact for flat tables, but lacks nesting, type awareness, row counts, and field disambiguation. TOON adds minimal overhead to gain explicit structure (length markers [N], in-scope delimiter, field names, deterministic quoting) that improves LLM reliability.
+- YAML: Similar indentation style; TOON is more constrained and deterministic, with explicit array headers, fixed quoting rules, and no comments.
+
+### At a Glance
+
+JSON:
+```json
+{
+  "users": [
+    { "id": 1, "name": "Alice", "role": "admin" },
+    { "id": 2, "name": "Bob", "role": "user" }
+  ]
+}
+```
+
+TOON:
+```
+users[2]{id,name,role}:
+  1,Alice,admin
+  2,Bob,user
+```
+
+### Design Principles
+
+- Token efficiency where it matters: arrays of uniform objects.
+- Determinism: canonical number formatting, stable field order, fixed indentation, no comments.
+- LLM-friendly guardrails: explicit lengths and field lists, delimiter scoping per array header, minimal and deterministic quoting, strict-mode validation of counts, widths, indentation, and escapes.
+- Language-neutral: encoders/decoders operate over the JSON data model; canonical number form and decoding rules are host-agnostic (see Section 2 and Appendix G).
 
 ### Specification Scope
 
@@ -163,34 +202,43 @@ This specification defines:
 - Ordering:
   - Array order MUST be preserved.
   - Object key order MUST be preserved as encountered by the encoder.
-- Numbers (encoding):
-  - -0 MUST be normalized to 0.
-  - Finite numbers MUST be rendered without scientific notation (e.g., 1e6 → 1000000; 1e-6 → 0.000001).
-  - Implementations MUST ensure decimal rendering does not use exponent notation.
-- Numbers (precision):
-  - JavaScript implementations SHOULD use the language's default Number.toString() conversion, which provides sufficient precision (typically 15-17 significant digits) for round-trip fidelity with IEEE 754 double-precision values.
-  - Implementations MUST preserve sufficient precision to ensure round-trip fidelity: decoding an encoded number MUST yield a value equal to the original.
-  - Trailing zeros MAY be omitted for whole numbers (e.g., 1000000 is preferred over 1000000.0).
-  - Very large numbers (e.g., greater than 10^20) that may lose precision in floating-point representation SHOULD be converted to quoted decimal strings if exact precision is required.
+- Numbers (canonical form for encoding):
+  - Encoders MUST emit numbers in canonical decimal form:
+    - No exponent notation (e.g., 1e6 MUST be rendered as 1000000; 1e-6 as 0.000001).
+    - No leading zeros except for the single digit "0" (e.g., "05" is not canonical).
+    - No trailing zeros in the fractional part (e.g., 1.5000 MUST be rendered as 1.5).
+    - If the fractional part is zero after normalization, emit as an integer (e.g., 1.0 → 1).
+    - -0 MUST be normalized to 0.
+  - Encoders MUST emit sufficient precision to ensure round-trip fidelity within the encoder's host environment: decode(encode(x)) MUST equal x.
+  - If the encoder's host environment cannot represent a numeric value without loss (e.g., arbitrary-precision decimals or integers exceeding the host's numeric range), the encoder MAY:
+    - Emit a quoted string containing the exact decimal representation to preserve value fidelity, OR
+    - Emit a canonical number that round-trips to the host's numeric approximation (losing precision), provided it conforms to the canonical formatting rules above.
+  - Encoders SHOULD provide an option to choose lossless stringification for out-of-range numbers.
+- Numbers (decoding):
+  - Decoders MUST accept decimal and exponent forms on input (e.g., 42, -3.14, 1e-6, -1E+9).
+  - Decoders MUST treat tokens with forbidden leading zeros (e.g., "05", "0001") as strings, not numbers.
+  - If a decoded numeric token is not representable in the host's default numeric type without loss, implementations MAY:
+    - Return a higher-precision numeric type (e.g., arbitrary-precision integer or decimal), OR
+    - Return a string, OR
+    - Return an approximate numeric value if that is the documented policy.
+  - Implementations MUST document their policy for handling out-of-range or non-representable numbers. A lossless-first policy is RECOMMENDED for libraries intended for data interchange or validation.
 - Null: Represented as the literal null.
 
 ## 3. Encoding Normalization (Reference Encoder)
 
-The reference encoder normalizes non-JSON values to the data model:
+Encoders MUST normalize non-JSON values to the JSON data model before encoding:
 
 - Number:
-  - Finite → number (non-exponential). -0 → 0.
+  - Finite → number (canonical decimal form per Section 2). -0 → 0.
   - NaN, +Infinity, -Infinity → null.
-- BigInt (JavaScript):
-  - If within Number.MIN_SAFE_INTEGER..Number.MAX_SAFE_INTEGER → converted to number.
-  - Otherwise → converted to a decimal string (e.g., "9007199254740993") and encoded as a string (quoted because it is numeric-like).
-- Date → ISO string (e.g., "2025-01-01T00:00:00.000Z").
-- Set → array by iterating entries and normalizing each element.
-- Map → object using String(key) for keys and normalizing values.
-- Plain object → own enumerable string keys in encounter order; values normalized recursively.
-- Function, symbol, undefined, or unrecognized types → null.
+- Non-JSON types MUST be normalized to the JSON data model (object, array, string, number, boolean, or null) before encoding. The mapping from host-specific types to JSON model is implementation-defined and MUST be documented.
+- Examples of host-type normalization (non-normative):
+  - Date/time objects → ISO 8601 string representation.
+  - Set-like collections → array.
+  - Map-like collections → object (with string keys).
+  - Undefined, function, symbol, or unrecognized types → null.
 
-Note: Other language ports SHOULD apply analogous normalization consistent with this spec’s data model and encoding rules.
+See Appendix G for non-normative language-specific examples (Go, JavaScript, Python, Rust).
 
 ## 4. Decoding Interpretation (Reference Decoder)
 
@@ -332,7 +380,7 @@ Otherwise, the string MAY be emitted without quotes. Unicode, emoji, and strings
 ### 7.3 Key Encoding (Encoding)
 
 Object keys and tabular field names:
-- MAY be unquoted only if they match: ^[A-Za-z_][\w.]*$.
+- MAY be unquoted only if they match: ^[A-Za-z_][A-Za-z0-9_.]*$.
 - Otherwise, they MUST be quoted and escaped per Section 7.1.
 
 Keys requiring quoting per the above rules MUST be quoted in all contexts, including array headers (e.g., "my-key"[N]:).
@@ -483,7 +531,7 @@ Decoding:
     - Tabs used as indentation MUST error. Tabs are allowed in quoted strings and as the HTAB delimiter.
   - Non-strict mode:
     - Depth MAY be computed as floor(indentSpaces / indentSize).
-    - Tabs in indentation are non-conforming and MAY be accepted or rejected.
+    - Implementations MAY accept tab characters in indentation. Depth computation for tabs is implementation-defined. Implementations MUST document their tab policy.
   - Surrounding whitespace around tokens SHOULD be tolerated; internal semantics follow quoting rules.
   - Blank lines:
     - Outside arrays/tabular rows: decoders SHOULD ignore completely blank lines (do not create/close structures).
@@ -994,15 +1042,20 @@ The reference test suite covers:
 - Tabular detection and formatting, including delimiter variations.
 - Mixed arrays and objects-as-list-items behavior, including nested arrays and objects.
 - Whitespace invariants (no trailing spaces/newline).
-- Normalization (BigInt, Date, undefined, NaN/Infinity, functions, symbols).
+- Canonical number formatting (no exponent, no trailing zeros, no leading zeros).
 - Decoder strict-mode errors: count mismatches, invalid escapes, missing colon, delimiter mismatches, indentation errors, blank-line handling.
+
+Note: Host-type normalization tests (e.g., BigInt, Date, Set, Map) are language-specific and maintained in implementation repositories. See Appendix G for normalization guidance.
 
 ## Appendix D: Document Changelog (Informative)
 
-### v1.4 (2025-11-02)
+### v1.4 (2025-11-05)
 
-- Clarified that keys requiring quoting (Section 7.3) MUST be quoted in all contexts, including array headers (e.g., "my-key"[N]:, "x-custom"[2]{fields}:).
-- No semantic changes to the specification; this is purely clarifying documentation that was already implied by the grammar.
+- Removed JavaScript-specific normalization details; replaced with language-agnostic requirements (Section 3).
+- Defined canonical number format for encoders and decoder acceptance rules (Section 2).
+- Added Appendix G with host-type normalization examples for Go, JavaScript, Python, and Rust.
+- Clarified non-strict mode tab handling as implementation-defined (Section 12).
+- Expanded regex notation for cross-language clarity (Section 7.3).
 
 ### v1.3 (2025-10-31)
 
@@ -1053,6 +1106,112 @@ This specification and reference implementation are released under the MIT Licen
   - Whitespace invariants for encoding and strict-mode indentation enforcement for decoding.
   - Blank-line handling and trailing-newline acceptance.
 
+## Appendix G: Host Type Normalization Examples (Informative)
+
+This appendix provides non-normative guidance on how implementations in different programming languages MAY normalize host-specific types to the JSON data model before encoding. The normative requirement is in Section 3: implementations MUST normalize non-JSON types to the JSON data model and MUST document their normalization policy.
+
+### G.1 Go
+
+Go implementations commonly normalize the following host types:
+
+Numeric Types:
+- `big.Int`: If within `int64` range, convert to number. Otherwise, convert to quoted decimal string per lossless policy.
+- `math.Inf()`, `math.NaN()`: Convert to `null`.
+
+Temporal Types:
+- `time.Time`: Convert to ISO 8601 string via `.Format(time.RFC3339)` or `.Format(time.RFC3339Nano)`.
+
+Collection Types:
+- `map[K]V`: Convert to object. Keys MUST be strings or convertible to strings via `fmt.Sprint`.
+- `[]T` (slices): Preserve as array.
+
+Struct Types:
+- Structs with exported fields: Convert to object using JSON struct tags if present.
+
+Non-Serializable Types:
+- `nil`: Maps to `null`.
+- Functions, channels, `unsafe.Pointer`: Not serializable; implementations MUST error or skip these fields.
+
+### G.2 JavaScript
+
+JavaScript implementations commonly normalize the following host types:
+
+Numeric Types:
+- `BigInt`: If the value is within `Number.MIN_SAFE_INTEGER` to `Number.MAX_SAFE_INTEGER`, convert to `number`. Otherwise, convert to a quoted decimal string (e.g., `BigInt(9007199254740993)` → `"9007199254740993"`).
+- `NaN`, `Infinity`, `-Infinity`: Convert to `null`.
+- `-0`: Normalize to `0`.
+
+Temporal Types:
+- `Date`: Convert to ISO 8601 string via `.toISOString()` (e.g., `"2025-01-01T00:00:00.000Z"`).
+
+Collection Types:
+- `Set`: Convert to array by iterating entries and normalizing each element.
+- `Map`: Convert to object using `String(key)` for keys and normalizing values recursively. Non-string keys are coerced to strings.
+
+Object Types:
+- Plain objects: Enumerate own enumerable string keys in encounter order; normalize values recursively.
+
+Non-Serializable Types:
+- `undefined`, `function`, `Symbol`: Convert to `null`.
+
+### G.3 Python
+
+Python implementations commonly normalize the following host types:
+
+Numeric Types:
+- `decimal.Decimal`: Convert to `float` if representable without loss, OR convert to quoted decimal string for exact preservation (implementation policy).
+- `float('inf')`, `float('-inf')`, `float('nan')`: Convert to `null`.
+- Arbitrary-precision integers (large `int`): Emit as number if within host numeric range, OR as quoted decimal string per lossless policy.
+
+Temporal Types:
+- `datetime.datetime`, `datetime.date`, `datetime.time`: Convert to ISO 8601 string representation via `.isoformat()`.
+
+Collection Types:
+- `set`, `frozenset`: Convert to list (array).
+- `dict`: Preserve as object with string keys. Non-string keys MUST be coerced to strings.
+
+Object Types:
+- Custom objects: Extract attributes via `__dict__` or implement custom serialization; convert to object (dict) with string keys.
+
+Non-Serializable Types:
+- `None`: Maps to `null`.
+- Functions, lambdas, modules: Convert to `null`.
+
+### G.4 Rust
+
+Rust implementations commonly normalize the following host types (typically using serialization frameworks like `serde`):
+
+Numeric Types:
+- `i128`, `u128`: If within `i64`/`u64` range, emit as number. Otherwise, convert to quoted decimal string per lossless policy.
+- `f64::INFINITY`, `f64::NEG_INFINITY`, `f64::NAN`: Convert to `null`.
+
+Temporal Types:
+- `chrono::DateTime<T>`: Convert to ISO 8601 string via `.to_rfc3339()`.
+- `chrono::NaiveDate`, `chrono::NaiveTime`: Convert to ISO 8601 partial representations.
+
+Collection Types:
+- `HashSet<T>`, `BTreeSet<T>`: Convert to `Vec<T>` (array).
+- `HashMap<K, V>`, `BTreeMap<K, V>`: Convert to object. Keys MUST be strings or convertible to strings via `Display` or `ToString`.
+
+Enum Types:
+- Unit variants: Convert to string of variant name (e.g., `Color::Red` → `"Red"`).
+- Tuple/struct variants: Typically convert to object with `"type"` field and data fields per `serde` conventions.
+
+Non-Serializable Types:
+- `Option::None`: Convert to `null`.
+- `Option::Some(T)`: Unwrap and normalize `T`.
+- Function pointers, raw pointers: Not serializable; implementations MUST error or skip these fields.
+
+### G.5 General Guidance
+
+Implementations in any language SHOULD:
+1. Document their normalization policy clearly, especially for:
+   - Large or arbitrary-precision numbers (lossless string vs. approximate number)
+   - Date/time representations (ISO 8601 format details)
+   - Collection type mappings (order preservation for sets)
+2. Provide configuration options where multiple strategies are reasonable (e.g., lossless vs. approximate numeric encoding).
+3. Ensure that normalization is deterministic: encoding the same host value twice MUST produce identical TOON output.
+
 ## 19. TOON Core Profile (Normative Subset)
 
 This profile captures the most common, memory-friendly rules.
@@ -1061,7 +1220,7 @@ This profile captures the most common, memory-friendly rules.
 - Indentation: 2 spaces per level (configurable indentSize).
   - Strict mode: leading spaces MUST be a multiple of indentSize; tabs in indentation MUST error.
 - Keys:
-  - Unquoted if they match ^[A-Za-z_][\w.]*$; otherwise quoted.
+  - Unquoted if they match ^[A-Za-z_][A-Za-z0-9_.]*$; otherwise quoted.
   - A colon MUST follow a key.
 - Strings:
   - Only these escapes allowed in quotes: \\, \", \n, \r, \t.
