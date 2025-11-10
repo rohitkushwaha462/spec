@@ -26,7 +26,8 @@ tests/
 │   │   ├── arrays-objects.json
 │   │   ├── delimiters.json
 │   │   ├── whitespace.json
-│   │   └── options.json
+│   │   ├── options.json
+│   │   └── key-folding.json
 │   └── decode/             # Decoding tests (TOON → JSON)
 │       ├── primitives.json
 │       ├── numbers.json
@@ -39,7 +40,8 @@ tests/
 │       ├── root-form.json
 │       ├── validation-errors.json
 │       ├── indentation-errors.json
-│       └── blank-lines.json
+│       ├── blank-lines.json
+│       └── path-expansion.json
 └── README.md               # This file
 ```
 
@@ -90,25 +92,31 @@ All test fixtures follow a standard JSON structure defined in [`fixtures.schema.
 {
   "delimiter": ",",
   "indent": 2,
-  "lengthMarker": "#"
+  "lengthMarker": "#",
+  "keyFolding": "safe",
+  "flattenDepth": 3
 }
 ```
 
-- `delimiter`: `","` (comma, default), `"\t"` (tab), or `"|"` (pipe). Affects encoder output for multiline object values; decoders parse what's present
+- `delimiter`: `","` (comma, default), `"\t"` (tab), or `"|"` (pipe). Affects encoder output; decoders parse the delimiter declared in array headers
 - `indent`: Number of spaces per indentation level (default: `2`)
 - `lengthMarker`: Optional. Set to `"#"` to prefix array lengths (e.g., `[#3]`). Omit this property to disable length markers
+- `keyFolding`: `"off"` (default) or `"safe"`. Enables key folding to collapse single-key object chains into dotted-path notation (v1.5+)
+- `flattenDepth`: Integer. Maximum depth to fold key chains when `keyFolding` is `"safe"` (default: Infinity). Values less than 2 have no practical folding effect (v1.5+)
 
 #### Decoding Options
 
 ```json
 {
   "indent": 2,
-  "strict": true
+  "strict": true,
+  "expandPaths": "safe"
 }
 ```
 
-- `indent`: Expected number of spaces per level (default: `2`)
-- `strict`: Enable strict validation (default: `true`)
+- `indent`: Expected number of spaces per indentation level (default: `2`)
+- `strict`: Enable strict validation (default: `true`). When `expandPaths` is `"safe"`, strict mode controls conflict resolution: errors on conflicts when `true`, LWW when `false` (v1.5+)
+- `expandPaths`: `"off"` (default) or `"safe"`. Enables path expansion to split dotted keys into nested object structures (v1.5+)
 
 ### Error Tests
 
@@ -154,6 +162,7 @@ The fixture format is language-agnostic JSON, so you can load and iterate it usi
 | `delimiters.json` | Tab and pipe delimiter options | §11 |
 | `whitespace.json` | Formatting invariants and indentation | §12 |
 | `options.json` | Length marker and delimiter option combinations | §3 |
+| `key-folding.json` | Key folding with safe mode, depth control, collision avoidance | §13.4 |
 
 ### Decoding Tests (`fixtures/decode/`)
 
@@ -171,6 +180,7 @@ The fixture format is language-agnostic JSON, so you can load and iterate it usi
 | `validation-errors.json` | Syntax errors, length mismatches, malformed input | §14 |
 | `indentation-errors.json` | Strict mode indentation validation | §14.3, §12 |
 | `blank-lines.json` | Blank line handling in arrays | §14.4, §12 |
+| `path-expansion.json` | Path expansion with safe mode, deep merge, strict-mode conflicts | §13.4, §14.5 |
 
 ## Validating Fixtures
 

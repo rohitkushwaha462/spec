@@ -5,6 +5,20 @@ All notable changes to the TOON specification will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5] - 2025-11-08
+
+### Added
+
+- Optional key folding for encoders: `keyFolding="safe"` mode with `flattenDepth` control to collapse single-key object chains into dotted-path notation (§13.4)
+- Optional path expansion for decoders: `expandPaths="safe"` mode to split dotted keys into nested objects, with conflict resolution tied to `strict` option (§13.4, §14.5)
+- IdentifierSegment terminology and path separator definition (fixed to `"."` in v1.5) (§1.9)
+- Deep-merge semantics for path expansion: recursive merge for objects, error on conflict when `strict=true`, last-write-wins (LWW) when `strict=false` (§13.4)
+
+### Changed
+
+- Both new features default to OFF and are fully backward-compatible
+- Safe-mode folding requires IdentifierSegment validation, collision avoidance, and no quoting
+
 ## [1.4] - 2025-11-05
 
 ### Changed

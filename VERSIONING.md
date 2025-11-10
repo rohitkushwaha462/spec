@@ -13,7 +13,7 @@ The TOON specification follows [Semantic Versioning](https://semver.org/) with a
 - **MAJOR version** - Incremented for breaking changes that are incompatible with previous versions
 - **MINOR version** - Incremented for backward-compatible additions, clarifications, or non-breaking changes
 
-**Example:** Moving from v1.3 to v1.4 means your implementation keeps working. Moving from v1.3 to v2.0 means you'll likely need to update your code.
+**Example:** Moving from v1.5 to v1.6 means your implementation keeps working. Moving from v1.5 to v2.0 means you'll likely need to update your code.
 
 ## What Constitutes a Breaking Change
 

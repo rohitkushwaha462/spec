@@ -1,6 +1,6 @@
 # TOON Format Specification
 
-[![SPEC v1.4](https://img.shields.io/badge/spec-v1.4-lightgrey)](./SPEC.md)
+[![SPEC v1.5](https://img.shields.io/badge/spec-v1.5-lightgrey)](./SPEC.md)
 [![Tests](https://img.shields.io/badge/tests-323-green)](./tests/fixtures/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
@@ -10,11 +10,23 @@ This repository contains the official specification for **Token-Oriented Object 
 
 [→ Read the full specification (SPEC.md)](./SPEC.md)
 
-- **Version:** 1.4 (2025-11-05)
+- **Version:** 1.5 (2025-11-10)
 - **Status:** Working Draft
 - **License:** MIT
 
 The specification includes complete grammar (ABNF), encoding rules, validation requirements, and conformance criteria.
+
+### New in v1.5
+
+- **Key Folding** (encode): Collapse nested single-key objects into compact dotted paths
+  - `{"a": {"b": {"c": 1}}}` → `a.b.c: 1`
+  - Opt-in via `keyFolding="safe"` with `flattenDepth` control
+- **Path Expansion** (decode): Expand dotted keys back to nested objects
+  - `a.b.c: 1` → `{"a": {"b": {"c": 1}}}`
+  - Opt-in via `expandPaths="safe"` with deep-merge semantics
+
+> [!NOTE]
+> Both features are opt-in to maintain backward compatibility.
 
 ## What is TOON?
 
