@@ -52,6 +52,32 @@ Complete, valid TOON files demonstrating core features:
   - Useful for TSV-like data
   - Spec: §8 Delimiters
 
+### Key Folding and Path Expansion (v1.5+)
+
+- [`valid/key-folding-basic.toon`](valid/key-folding-basic.toon) - Basic dotted-key notation
+  - Demonstrates collapsing nested objects: `server.host: localhost` instead of 3 indentation levels
+  - Significant token savings for deeply nested configuration data
+  - Requires encoder option `keyFolding="safe"` to produce; decoder expands with `expandPaths="safe"`
+  - Spec: §13.4 Key Folding and Path Expansion
+
+- [`valid/key-folding-with-array.toon`](valid/key-folding-with-array.toon) - Dotted keys with arrays
+  - Shows folding combined with inline arrays: `data.meta.items[3]: x,y,z`
+  - Demonstrates that folding stops at array boundaries (arrays terminate chains)
+  - Useful for API responses and structured data with nested metadata
+  - Spec: §13.4 Key Folding
+
+- [`valid/key-folding-mixed.toon`](valid/key-folding-mixed.toon) - Mixed folding strategies
+  - Shows both folded (`app.name: MyApp`) and regular nested keys in same document
+  - Demonstrates `flattenDepth` control for partial folding
+  - Allows selective use of dotted notation where most beneficial
+  - Spec: §13.4 Key Folding
+
+- [`valid/path-expansion-merge.toon`](valid/path-expansion-merge.toon) - Deep merge behavior
+  - Demonstrates how overlapping dotted keys merge during expansion
+  - Shows `user.profile.name: Ada` + `user.settings.theme: dark` → nested object with both branches
+  - Decoder option `expandPaths="safe"` reconstructs nested structure
+  - Spec: §13.4 Path Expansion
+
 ## Invalid Examples
 
 Examples that intentionally violate TOON syntax rules:
@@ -66,14 +92,39 @@ Examples that intentionally violate TOON syntax rules:
   - Demonstrates common syntax error
   - Spec: §6 Objects
 
+- **[`invalid/path-expansion-conflict-strict.toon`](invalid/path-expansion-conflict-strict.toon)** - Path expansion conflict (v1.5+)
+  - First line creates nested path `user.profile.name`, second line tries to assign primitive to `user.profile`
+  - Fails when decoded with `expandPaths="safe"` and `strict=true` (default)
+  - With `strict=false`, applies LWW conflict resolution (later value wins)
+  - Spec: §13.4 Path Expansion, §14.5 Conflicts
+
+- **[`invalid/key-folding-non-identifier.toon`](invalid/key-folding-non-identifier.toon)** - Non-identifier segments (v1.5+)
+  - Contains keys like `first-name` with hyphens (not valid IdentifierSegments)
+  - These remain as literal dotted keys when `expandPaths="safe"` is used
+  - Demonstrates safe mode validation: only expands keys with valid identifier segments
+  - Note: This is NOT an error—it's valid TOON, but shows when expansion doesn't occur
+  - Spec: §13.4 Safe Mode Requirements, §1.9 IdentifierSegment
+
 ## Conversions
 
 Side-by-side JSON ↔ TOON examples showing equivalent representations:
 
 - **[`conversions/users.json`](conversions/users.json)** + **[`conversions/users.toon`](conversions/users.toon)**
-  - Same data in both formats
+  - Same tabular data in both formats
   - Shows token reduction achieved by TOON (≈30-60% for tabular data)
   - Demonstrates the primary use case: uniform arrays of objects
+
+- **[`conversions/config.json`](conversions/config.json)** + **[`conversions/config.toon`](conversions/config.toon)** (v1.5+)
+  - Deeply nested configuration data (server, database, logging settings)
+  - TOON version uses dotted-key notation (`database.connection.host: localhost`)
+  - Shows ≈40-50% token reduction for deeply nested structures
+  - Demonstrates key folding benefits for configuration files
+
+- **[`conversions/api-response.json`](conversions/api-response.json)** + **[`conversions/api-response.toon`](conversions/api-response.toon)** (v1.5+)
+  - API response with nested data and metadata
+  - TOON version collapses nested paths (`data.attributes.name: Ada Lovelace`)
+  - Shows practical use case for serializing API responses
+  - Demonstrates how key folding maintains readability while reducing tokens
 
 ## Using These Examples
 
